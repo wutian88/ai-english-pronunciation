@@ -1,93 +1,19 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AI English">
-  <title>AI English · 发音恢复计划</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <main class="shell">
-    <header class="hero">
-      <div class="eyebrow">AI ENGLISH · LESSON <span id="dayNumber">1</span></div>
-      <h1>把英语练成你的<br><em>AI 工作语言</em></h1>
-      <p>每天 15 分钟。先听懂，再说清楚，最后用在真实的 AI 项目里。</p>
-      <div class="progress-wrap" aria-label="本课进度">
-        <div class="progress-meta"><span>本课进度</span><strong id="progressText">0 / 5</strong></div>
-        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-      </div>
-    </header>
-
-    <nav class="tabs" aria-label="学习模块">
-      <button class="tab active" data-view="learn">学习</button>
-      <button class="tab" data-view="practice">跟读</button>
-      <button class="tab" data-view="quiz">小测</button>
-      <button class="tab" data-view="stats">记录</button>
-    </nav>
-
-    <section id="learn" class="view active">
-      <div class="section-heading">
-        <div><span class="kicker">TODAY'S CORE</span><h2>今天的 AI 词汇</h2></div>
-        <button id="playAll" class="ghost-btn" aria-label="连续播放全部单词">▶ 全部听一遍</button>
-      </div>
-      <div id="wordDeck" class="word-deck"></div>
-      <button id="nextLesson" class="primary-btn">完成本课并继续</button>
-    </section>
-
-    <section id="practice" class="view">
-      <div class="section-heading"><div><span class="kicker">SHADOWING</span><h2>听一句，跟一句</h2></div></div>
-      <article class="practice-card">
-        <span class="scenario">真实工作表达</span>
-        <p id="practiceSentence" class="sentence"></p>
-        <p id="practiceTranslation" class="translation"></p>
-        <div class="speed-row">
-          <button class="speed active" data-rate="0.72">慢速</button>
-          <button class="speed" data-rate="0.92">正常</button>
-        </div>
-        <div class="practice-actions">
-          <button id="listenSentence" class="round-action"><span>🔊</span>听示范</button>
-          <button id="recordSentence" class="round-action accent"><span>●</span><span id="recordLabel">开始跟读</span></button>
-          <button id="playRecording" class="round-action" disabled><span>▶</span>听自己</button>
-        </div>
-        <button id="recognizeSentence" class="recognize-btn">用语音识别检查发音</button>
-        <div id="speechResult" class="speech-result" hidden></div>
-      </article>
-      <div class="tip"><strong>跟读诀窍</strong><p>先模仿整句节奏和重音，再纠正单个音。语音识别只是辅助参考；若 iPhone 主屏幕应用中无法识别，请用 Safari 打开同一网址继续练习。</p></div>
-    </section>
-
-    <section id="quiz" class="view">
-      <div class="section-heading"><div><span class="kicker">QUICK CHECK</span><h2>60 秒小测</h2></div></div>
-      <article id="quizCard" class="quiz-card"></article>
-    </section>
-
-    <section id="stats" class="view">
-      <div class="section-heading"><div><span class="kicker">YOUR MOMENTUM</span><h2>你的学习记录</h2></div></div>
-      <div class="stats-grid">
-        <div class="stat"><strong id="learnedCount">0</strong><span>已学词汇</span></div>
-        <div class="stat"><strong id="streakCount">0</strong><span>已完成课程</span></div>
-        <div class="stat"><strong id="quizAccuracy">—</strong><span>测验正确率</span></div>
-      </div>
-      <div class="roadmap">
-        <h3>AI 英语入门四课</h3>
-        <ol>
-          <li class="current"><b>第 1 课</b><span>模型、提示词与上下文</span></li>
-          <li><b>第 2 课</b><span>Embedding 与 RAG 检索</span></li>
-          <li><b>第 3 课</b><span>Agent 与工具调用</span></li>
-          <li><b>第 4 课</b><span>API 与请求响应</span></li>
-        </ol>
-      </div>
-      <p class="storage-note">学习记录只存在当前浏览器中。若要添加到 iPhone 主屏幕，建议先添加、再从主屏幕开始学习；Safari 中已有的记录不会自动转入。</p>
-      <button id="resetProgress" class="text-btn">重置学习记录</button>
-    </section>
-  </main>
-
-  <div id="toast" class="toast" role="status"></div>
-  <script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="开口英语" />
+    <meta name="description" content="免费练习日常英语与美式发音，另有 AI 工作英语选学" />
+    <link rel="icon" type="image/svg+xml" href="/ai-english-pronunciation/icon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <title>日常开口英语 · 免费发音练习</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
