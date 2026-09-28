@@ -1,0 +1,10 @@
+{
+  "name": "AI English 发音训练",
+  "short_name": "AI English",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "description": "面向 AI 应用开发者的免费英语与发音训练"
+}
