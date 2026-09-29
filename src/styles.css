@@ -8,3 +8,13 @@ input,textarea{font-size:16px!important}.rating-row button,.sentence-tabs button
 .update-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:7px;padding:10px 15px;background:#164e3c;color:#fff;font-size:12px}.update-banner span{flex:1}.update-banner button{min-height:36px;padding:6px 9px;border:1px solid #fff8;border-radius:8px;background:#ffffff20;color:#fff;font-size:11px;white-space:nowrap}
 .study-advice{margin:-5px 0 18px;padding:12px 14px;background:#e4f2e9;border-left:3px solid #3e9b71;border-radius:9px;color:#3b6e54;font-size:12px;line-height:1.6}
 .backup-link{margin-top:12px}
+.bottom-nav.without-shadowing{grid-template-columns:repeat(4,1fr)}
+.icon-button.small{width:44px;height:44px}
+.sentence-list{display:grid;gap:9px;margin-top:12px}
+.sentence-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e0e9e1;border-radius:12px;background:#fbfdfb}
+.sentence-line>div{min-width:0;overflow-wrap:anywhere}
+.sentence-line strong{color:#244e40;font-size:13px;line-height:1.45}
+.sentence-line p{margin:5px 0;color:#647a70;font-size:12px;line-height:1.5}
+.sentence-line small{display:block;color:#8c6b43;font-size:11px;line-height:1.5}
+.listen-button{flex:none;min-height:44px;padding:8px 10px;border:1px solid #c7e2d2;border-radius:10px;background:#eff8f0;color:#1f7054;font-size:12px;font-weight:700}
+@media(max-width:380px){.sentence-line{align-items:stretch;flex-direction:column}.listen-button{align-self:flex-start}}

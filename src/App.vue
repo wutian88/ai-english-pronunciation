@@ -14,6 +14,8 @@ import type { CustomWord, DailySession, Lesson, PracticeRecord, Rating, TrackId,
 
 type Tab = 'today' | 'courses' | 'shadow' | 'wordbook' | 'mine';
 
+// Keep the shadowing/recording flow intact for a future release; hide it for now.
+const shadowingEnabled = false;
 const track = ref<TrackId>('daily');
 const { needRefresh, updateServiceWorker } = useRegisterSW();
 const tab = ref<Tab>('today');
@@ -28,7 +30,7 @@ const toast = ref('');
 const todayKey = ref(localDate());
 const nowTick = ref(Date.now());
 const online = ref(navigator.onLine);
-const speakingRate = ref(0.8);
+const speakingRate = ref(0.95);
 const voices = ref<SpeechSynthesisVoice[]>([]);
 const recordingState = ref<'idle' | 'recording' | 'saving'>('idle');
 const recordingUrl = ref('');
@@ -60,7 +62,7 @@ const todayCompleted = computed(() => sessions.value.filter((item) => item.track
 const studyAdvice = computed(() => {
   if (dueWords.value.length > 20) return `有 ${dueWords.value.length} 项到期，今天建议先复习最早的 20 项；新课可以缓一天，也可自行打开。`;
   if (track.value === 'daily' && completedCount.value > 0 && completedCount.value % 5 === 0 && !todayCompleted.value.length) return '你刚完成一组 5 课，今天适合用课程对话做一次综合复习，再决定是否继续新课。';
-  return nextLesson.value ? `今日建议：先复习，再学《${nextLesson.value.title}》。` : '这个词库已学完新课，今天可以复习到期词句，或重新跟读喜欢的课程。';
+  return nextLesson.value ? `今日建议：先复习，再学《${nextLesson.value.title}》。` : '这个词库已学完新课，今天可以复习到期词句，或重听喜欢的课程发音。';
 });
 const currentSentence = computed(() => currentLesson.value?.sentences[sentenceIndex.value]);
 const allTrackWords = computed(() => [...builtInWords(track.value), ...customWords.value.filter((item) => item.track === track.value)]);
@@ -454,7 +456,7 @@ async function restoreFromGitHub() {
 
           <section v-if="currentLesson" class="panel lesson-panel">
             <div class="section-top"><div><p class="eyebrow">LESSON {{ String(currentLesson.order).padStart(2, '0') }} · WEEK {{ currentLesson.week }}</p><h2>{{ currentLesson.title }}</h2><p>{{ currentLesson.subtitle }}</p></div><span class="lesson-count">{{ currentLesson.words.length }} 个表达</span></div>
-            <div class="lesson-actions"><button class="secondary-button" @click="tab = 'courses'">换一课</button><button class="primary-button" @click="tab = 'shadow'">去跟读 →</button></div>
+            <div class="lesson-actions"><button class="secondary-button" @click="tab = 'courses'">换一课</button><button v-if="shadowingEnabled" class="primary-button" @click="tab = 'shadow'">去跟读 →</button></div>
 
             <h3 class="subheading">今天的词与句块</h3>
             <div class="word-grid">
@@ -465,14 +467,18 @@ async function restoreFromGitHub() {
               </article>
             </div>
 
-            <h3 class="subheading">短对话 · 试着跟读</h3>
+            <h3 class="subheading">常用句 · 点击听发音</h3>
+            <div class="speed-row"><span>朗读速度</span><button :class="{ active: speakingRate === 0.72 }" @click="speakingRate = 0.72">慢速</button><button :class="{ active: speakingRate === 0.95 }" @click="speakingRate = 0.95">正常</button></div>
+            <div class="sentence-list"><article v-for="(sentence, index) in currentLesson.sentences" :key="sentence.id" class="sentence-line"><div><strong>{{ index + 1 }}. {{ sentence.en }}</strong><p>{{ sentence.zh }}</p><small v-if="sentence.notes">发音提示：{{ sentence.notes }}</small></div><button class="listen-button" :aria-label="`朗读第 ${index + 1} 句`" @click="speak(sentence.en)">🔊 听发音</button></article></div>
+
+            <h3 class="subheading">短对话 · 点击听发音</h3>
             <div class="dialogue"><div v-for="(line, index) in currentLesson.dialogue" :key="index" class="dialogue-line"><span>{{ line.speaker }}</span><div><p>{{ line.en }}</p><small>{{ line.zh }}</small></div><button class="icon-button small" :aria-label="`朗读对话第 ${index + 1} 句`" @click="speak(line.en)">▶</button></div></div>
 
             <h3 class="subheading">换成自己的话</h3>
             <div class="prompt-list"><div v-for="(prompt, index) in currentLesson.practicePrompts" :key="index"><strong>{{ index + 1 }}.</strong><span>{{ prompt.zh }}</span><small>参考：{{ prompt.en }}</small><button class="text-button" @click="speak(prompt.en)">听参考表达</button></div></div>
-            <div class="bottom-actions"><button class="secondary-button" @click="tab = 'shadow'">练 4 句跟读</button><button class="primary-button" @click="completeLesson">完成本课</button></div>
+            <div class="bottom-actions"><button v-if="shadowingEnabled" class="secondary-button" @click="tab = 'shadow'">练 4 句跟读</button><button class="primary-button" @click="completeLesson">完成本课</button></div>
           </section>
-          <section v-else class="panel"><p class="eyebrow">ALL DONE</p><h2>{{ trackName }}的新课都完成了！</h2><p>今天可以复习到期内容，或在课程列表中打开任意一课重新跟读。</p><button class="secondary-button" @click="tab = 'courses'">查看全部课程 →</button></section>
+          <section v-else class="panel"><p class="eyebrow">ALL DONE</p><h2>{{ trackName }}的新课都完成了！</h2><p>今天可以复习到期内容，或在课程列表中打开任意一课重听发音。</p><button class="secondary-button" @click="tab = 'courses'">查看全部课程 →</button></section>
         </section>
 
         <section v-else-if="tab === 'courses'" class="page">
@@ -481,7 +487,7 @@ async function restoreFromGitHub() {
           <button class="secondary-button full" @click="openNextLesson">打开下一节未完成课程</button>
         </section>
 
-        <section v-else-if="tab === 'shadow'" class="page">
+        <section v-else-if="shadowingEnabled && tab === 'shadow'" class="page">
           <div class="page-heading"><p class="eyebrow">LISTEN · SHADOW · COMPARE</p><h1>听一句，跟一句</h1><p>听示范、录自己的声音、交替对照。不用联网语音识别打分。</p></div>
           <template v-if="currentLesson && currentSentence">
             <div class="sentence-tabs"><button v-for="(sentence, index) in currentLesson.sentences" :key="sentence.id" :class="{ active: sentenceIndex === index }" @click="sentenceIndex = index">第 {{ index + 1 }} 句</button></div>
@@ -511,13 +517,13 @@ async function restoreFromGitHub() {
         <section v-else class="page">
           <div class="page-heading"><p class="eyebrow">MY LEARNING</p><h1>我的学习与备份</h1><p>记录在这台设备上；GitHub 仅是你手动提交的额外备份。</p></div>
           <div class="metric-row"><div><strong>{{ sessions.filter((item) => item.track === 'daily' && item.completedAt).length }}</strong><span>日常课完成</span></div><div><strong>{{ sessions.filter((item) => item.track === 'ai' && item.completedAt).length }}</strong><span>AI 课完成</span></div><div><strong>{{ progress.length }}</strong><span>练过的表达</span></div></div>
-          <section class="panel"><h2>本地备份</h2><p>导出学习进度和自定义词库，再存到“文件”应用；录音不包含在 JSON 中，仍留在原设备。</p><div class="stack-actions"><button class="primary-button" @click="exportProgress">导出进度 JSON</button><label class="secondary-button import-button">导入进度 JSON<input type="file" accept="application/json,.json" @change="importProgress"></label></div><a v-if="backupUrl" class="text-link backup-link" :href="backupUrl" :download="backupName">若未自动保存，点这里下载备份 →</a><p class="fine-print">Safari 与主屏幕应用可能是两份独立存储。换设备或重新安装前，请先导出备份。</p></section>
+          <section class="panel"><h2>本地备份</h2><p>导出学习进度和自定义词库，再存到“文件”应用。此前保存的录音会留在原设备，不包含在 JSON 中。</p><div class="stack-actions"><button class="primary-button" @click="exportProgress">导出进度 JSON</button><label class="secondary-button import-button">导入进度 JSON<input type="file" accept="application/json,.json" @change="importProgress"></label></div><a v-if="backupUrl" class="text-link backup-link" :href="backupUrl" :download="backupName">若未自动保存，点这里下载备份 →</a><p class="fine-print">Safari 与主屏幕应用可能是两份独立存储。换设备或重新安装前，请先导出备份。</p></section>
           <section class="panel"><h2>GitHub 每日记录</h2><p>固定 Issue 已准备好。学完后手动复制进度，再用 wutian88 账号去 Issue 粘贴并发布；应用不保存你的 GitHub 密码或密钥。</p><label class="search-label">固定 Issue 链接<input v-model="issueUrl" type="url" placeholder="https://github.com/wutian88/ai-english-pronunciation/issues/1"></label><div class="stack-actions"><button class="secondary-button" @click="saveIssue">保存 Issue 地址</button><a class="text-link" :href="issueLink" target="_blank" rel="noopener noreferrer">打开固定 Issue ↗</a></div><div class="stack-actions"><button class="primary-button" @click="copyTodayLog">复制今天的进度</button><button class="secondary-button" :disabled="!online || !issueNumberFromUrl(issueUrl)" @click="restoreFromGitHub">从 Issue 恢复进度</button></div><textarea v-if="logText" class="log-preview" readonly :value="logText" aria-label="可手动复制的今日进度"></textarea><p class="fine-print">Issue 仅备份课程与复习进度，不包含自定义词条或录音；换设备前请另存上面的 JSON。公开评论任何人都能看到；恢复时只读取仓库主人发布的有效记录。离线学习无需 GitHub。</p></section>
-          <section class="panel"><h2>设备与离线说明</h2><p>{{ voiceStatus }}</p><p class="fine-print">应用界面和课程可离线使用；首次安装或课程更新后请联网打开一次。录音需要麦克风授权。系统朗读是否能在断网时工作，取决于 iPhone 已安装的英文语音。</p></section>
+          <section class="panel"><h2>设备与离线说明</h2><p>{{ voiceStatus }}</p><p class="fine-print">应用界面和课程可离线使用；首次安装或课程更新后请联网打开一次。词语、常用句和对话可点击发音按钮；系统朗读能否在断网时工作，取决于 iPhone 已安装的英文语音。</p></section>
         </section>
       </main>
 
-      <nav class="bottom-nav" aria-label="主要导航"><button :class="{ active: tab === 'today' }" @click="tab = 'today'"><span>⌂</span>今日</button><button :class="{ active: tab === 'courses' }" @click="tab = 'courses'"><span>▦</span>课程</button><button :class="{ active: tab === 'shadow' }" @click="tab = 'shadow'"><span>◉</span>跟读</button><button :class="{ active: tab === 'wordbook' }" @click="tab = 'wordbook'"><span>▤</span>词库</button><button :class="{ active: tab === 'mine' }" @click="tab = 'mine'"><span>●</span>我的</button></nav>
+      <nav class="bottom-nav" :class="{ 'without-shadowing': !shadowingEnabled }" aria-label="主要导航"><button :class="{ active: tab === 'today' }" @click="tab = 'today'"><span>⌂</span>今日</button><button :class="{ active: tab === 'courses' }" @click="tab = 'courses'"><span>▦</span>课程</button><button v-if="shadowingEnabled" :class="{ active: tab === 'shadow' }" @click="tab = 'shadow'"><span>◉</span>跟读</button><button :class="{ active: tab === 'wordbook' }" @click="tab = 'wordbook'"><span>▤</span>词库</button><button :class="{ active: tab === 'mine' }" @click="tab = 'mine'"><span>●</span>我的</button></nav>
     </template>
     <div v-else class="loading">正在打开你的离线课程…</div>
     <div v-if="toast" class="toast" role="status">{{ toast }}</div>
