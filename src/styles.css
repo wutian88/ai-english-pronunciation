@@ -17,4 +17,5 @@ input,textarea{font-size:16px!important}.rating-row button,.sentence-tabs button
 .sentence-line p{margin:5px 0;color:#647a70;font-size:12px;line-height:1.5}
 .sentence-line small{display:block;color:#8c6b43;font-size:11px;line-height:1.5}
 .listen-button{flex:none;min-height:44px;padding:8px 10px;border:1px solid #c7e2d2;border-radius:10px;background:#eff8f0;color:#1f7054;font-size:12px;font-weight:700}
+.example-listen-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:7px;padding:8px 11px;border:1px solid #c7e2d2;border-radius:10px;background:#eff8f0;color:#1f7054;font-size:12px;font-weight:700}
 @media(max-width:380px){.sentence-line{align-items:stretch;flex-direction:column}.listen-button{align-self:flex-start}}
