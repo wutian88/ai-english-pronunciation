@@ -447,7 +447,7 @@ async function restoreFromGitHub() {
     <template v-else-if="ready">
       <section class="track-switch" aria-label="选择学习词库">
         <button :class="{ selected: track === 'daily' }" @click="changeTrack('daily')"><span>☀</span><strong>日常英语</strong><small>40 节生活口语</small></button>
-        <button :class="{ selected: track === 'ai' }" @click="changeTrack('ai')"><span>✦</span><strong>AI 英语</strong><small>4 节独立选修</small></button>
+        <button :class="{ selected: track === 'ai' }" @click="changeTrack('ai')"><span>✦</span><strong>AI 英语</strong><small>{{ lessonsByTrack.ai.length }} 节专项课程</small></button>
       </section>
 
       <main id="main-content">

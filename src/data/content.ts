@@ -2,11 +2,13 @@ import type { Lesson, TrackId, WordItem } from '../types/wordbook';
 import { dailyLessonsA } from './daily-a';
 import { dailyLessonsB } from './daily-b';
 import { aiLessons } from './ai';
+import { aiLessonsExtraA } from './ai-extra-a';
+import { aiLessonsExtraB } from './ai-extra-b';
 
 export const dailyLessons: Lesson[] = [...dailyLessonsA, ...dailyLessonsB].sort((a, b) => a.order - b.order);
 export const lessonsByTrack: Record<TrackId, Lesson[]> = {
   daily: dailyLessons,
-  ai: [...aiLessons].sort((a, b) => a.order - b.order),
+  ai: [...aiLessons, ...aiLessonsExtraA, ...aiLessonsExtraB].sort((a, b) => a.order - b.order),
 };
 
 export function builtInWords(track: TrackId): WordItem[] {

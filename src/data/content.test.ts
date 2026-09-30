@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { lessonsByTrack } from './content';
 
 describe('built-in curriculum', () => {
-  it('has 40 daily lessons and 4 separate AI electives', () => {
+  it('has 40 daily lessons and 20 separate AI lessons', () => {
     expect(lessonsByTrack.daily).toHaveLength(40);
-    expect(lessonsByTrack.ai).toHaveLength(4);
+    expect(lessonsByTrack.ai).toHaveLength(20);
     expect(lessonsByTrack.daily.every((item) => item.track === 'daily')).toBe(true);
     expect(lessonsByTrack.ai.every((item) => item.track === 'ai')).toBe(true);
+  });
+
+  it('keeps every curriculum in continuous lesson order', () => {
+    expect(lessonsByTrack.daily.map((item) => item.order)).toEqual(Array.from({ length: 40 }, (_, index) => index + 1));
+    expect(lessonsByTrack.ai.map((item) => item.order)).toEqual(Array.from({ length: 20 }, (_, index) => index + 1));
   });
 
   it('contains unique complete lessons, words, and shadowing sentences', () => {

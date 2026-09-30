@@ -1,11 +1,11 @@
 import type { Lesson } from '../types/wordbook';
 
-type WordSeed = [word: string, phonetic: string, translation: string, exampleEn: string, exampleZh: string];
-type SentenceSeed = [en: string, zh: string, notes?: string];
-type DialogueSeed = [speaker: 'A' | 'B', en: string, zh: string];
-type PromptSeed = [en: string, zh: string];
+export type WordSeed = [word: string, phonetic: string, translation: string, exampleEn: string, exampleZh: string];
+export type SentenceSeed = [en: string, zh: string, notes?: string];
+export type DialogueSeed = [speaker: 'A' | 'B', en: string, zh: string];
+export type PromptSeed = [en: string, zh: string];
 
-function ai(
+export function ai(
   order: number,
   title: string,
   subtitle: string,
@@ -19,7 +19,7 @@ function ai(
     id,
     track: 'ai',
     order,
-    week: 1,
+    week: Math.ceil(order / 4),
     title,
     subtitle,
     words: words.map(([word, phonetic, translation, en, zh], index) => ({
