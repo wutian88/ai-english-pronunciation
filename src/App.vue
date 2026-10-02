@@ -10,6 +10,7 @@ import {
 } from './lib/db';
 import { DEFAULT_ISSUE_URL, fetchOwnerLogs, formatLog, issueNumberFromUrl, REPOSITORY } from './lib/github';
 import { dueRecords, localDate, rateItem, selectNextLesson } from './lib/scheduler';
+import { checkWaitingUpdate } from './lib/updates';
 import type { CustomWord, DailySession, Lesson, PracticeRecord, Rating, TrackId, WordItem } from './types/wordbook';
 
 type Tab = 'today' | 'courses' | 'shadow' | 'wordbook' | 'mine';
@@ -32,6 +33,9 @@ const nowTick = ref(Date.now());
 const online = ref(navigator.onLine);
 const speakingRate = ref(0.95);
 const checkingUpdates = ref(false);
+const updatingApp = ref(false);
+const updateBannerDismissed = ref(false);
+const updateStatus = ref('联网检查新版本；下载完成后，可以在这里直接更新。');
 const voices = ref<SpeechSynthesisVoice[]>([]);
 const recordingState = ref<'idle' | 'recording' | 'saving'>('idle');
 const recordingUrl = ref('');
@@ -88,24 +92,49 @@ function notify(message: string) {
   toastTimer = window.setTimeout(() => { toast.value = ''; }, 3500);
 }
 
-function postponeUpdate() { needRefresh.value = false; }
+function postponeUpdate() { updateBannerDismissed.value = true; }
+
+watch(needRefresh, (available) => {
+  if (available) {
+    updateBannerDismissed.value = false;
+    updateStatus.value = '新版本已下载，点击下方「立即更新」即可使用。';
+  }
+}, { immediate: true });
+
+async function applyAppUpdate() {
+  if (updatingApp.value || checkingUpdates.value) return;
+  if (recordingState.value !== 'idle') { notify('请先完成录音保存，再更新应用'); return; }
+  updatingApp.value = true;
+  updateStatus.value = '正在更新，页面即将重新打开…';
+  try {
+    await updateServiceWorker(true);
+  } catch {
+    updateStatus.value = '更新失败，请稍后点击「立即更新」重试。';
+    notify(updateStatus.value);
+  } finally { updatingApp.value = false; }
+}
+
+async function handleAppUpdate() {
+  if (needRefresh.value) await applyAppUpdate();
+  else await checkForUpdates();
+}
 
 async function checkForUpdates() {
-  if (!online.value) { notify('请联网后再检查更新'); return; }
-  if (!('serviceWorker' in navigator)) { notify('此浏览器不支持应用更新检查'); return; }
+  if (checkingUpdates.value || updatingApp.value) return;
+  if (!online.value) { updateStatus.value = '当前离线，请联网后再检查更新。'; return; }
+  if (!('serviceWorker' in navigator)) { updateStatus.value = '此浏览器不支持应用更新检查。'; return; }
   checkingUpdates.value = true;
+  updateStatus.value = '正在检查并下载可用的新版本…';
   try {
     const registration = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
-    if (!registration) { notify('离线应用尚未安装，请稍后重新打开再试'); return; }
-    if (registration.waiting) {
+    if (!registration) { updateStatus.value = '更新服务尚未就绪，请稍后重新打开应用再试。'; return; }
+    if (await checkWaitingUpdate(registration)) {
       needRefresh.value = true;
-      notify('新版本已准备好，请点顶部的「现在更新」');
-      return;
+      updateStatus.value = '新版本已下载，点击下方「立即更新」即可使用。';
+    } else {
+      updateStatus.value = needRefresh.value ? '新版本已下载，点击下方「立即更新」即可使用。' : '已检查，当前没有发现新版本。';
     }
-    await registration.update();
-    if (registration.waiting) needRefresh.value = true;
-    notify(needRefresh.value ? '新版本已准备好，请点顶部的「现在更新」' : '已检查更新；若有新版本，顶部会出现更新提示');
-  } catch { notify('检查更新失败，请稍后重试'); }
+  } catch { updateStatus.value = '检查或下载更新未完成，请联网后稍后再试。'; }
   finally { checkingUpdates.value = false; }
 }
 
@@ -437,7 +466,7 @@ async function restoreFromGitHub() {
 
 <template>
   <div class="app-shell">
-    <div v-if="needRefresh" class="update-banner" role="status"><span>应用新版本已下载，完成当前练习后可更新。</span><button :disabled="recordingState !== 'idle'" @click="updateServiceWorker(true)">现在更新</button><button @click="postponeUpdate">稍后</button></div>
+    <div v-if="needRefresh && !updateBannerDismissed && tab !== 'mine'" class="update-banner" role="status"><span>应用新版本已下载，也可在「我的」中更新。</span><button :disabled="recordingState !== 'idle' || updatingApp || checkingUpdates" @click="applyAppUpdate">{{ updatingApp ? '正在更新…' : '现在更新' }}</button><button @click="postponeUpdate">稍后</button></div>
     <header class="topbar">
       <div class="brand"><span class="brand-mark">E</span><div><strong>开口英语</strong><small>每天说一点，慢慢说顺</small></div></div>
       <span class="status-pill" :class="online ? '' : 'offline'">{{ online ? '可离线学习' : '当前离线' }}</span>
@@ -536,10 +565,16 @@ async function restoreFromGitHub() {
 
         <section v-else class="page">
           <div class="page-heading"><p class="eyebrow">MY LEARNING</p><h1>我的学习与备份</h1><p>记录在这台设备上；GitHub 仅是你手动提交的额外备份。</p></div>
+          <section class="panel app-update-panel" aria-labelledby="app-update-heading">
+            <h2 id="app-update-heading">应用更新</h2>
+            <p role="status" aria-live="polite">{{ updateStatus }}</p>
+            <button type="button" class="primary-button app-update-button" :disabled="checkingUpdates || updatingApp || recordingState !== 'idle'" @click="handleAppUpdate">{{ updatingApp ? '正在更新…' : checkingUpdates ? '正在检查…' : needRefresh ? '立即更新' : '检查更新' }}</button>
+            <p class="fine-print">更新会重新打开页面，保留已保存的学习进度和自定义词库。</p>
+          </section>
           <div class="metric-row"><div><strong>{{ sessions.filter((item) => item.track === 'daily' && item.completedAt).length }}</strong><span>日常课完成</span></div><div><strong>{{ sessions.filter((item) => item.track === 'ai' && item.completedAt).length }}</strong><span>AI 课完成</span></div><div><strong>{{ progress.length }}</strong><span>练过的表达</span></div></div>
           <section class="panel"><h2>本地备份</h2><p>导出学习进度和自定义词库，再存到“文件”应用。此前保存的录音会留在原设备，不包含在 JSON 中。</p><div class="stack-actions"><button class="primary-button" @click="exportProgress">导出进度 JSON</button><label class="secondary-button import-button">导入进度 JSON<input type="file" accept="application/json,.json" @change="importProgress"></label></div><a v-if="backupUrl" class="text-link backup-link" :href="backupUrl" :download="backupName">若未自动保存，点这里下载备份 →</a><p class="fine-print">Safari 与主屏幕应用可能是两份独立存储。换设备或重新安装前，请先导出备份。</p></section>
           <section class="panel"><h2>GitHub 每日记录</h2><p>固定 Issue 已准备好。学完后手动复制进度，再用 wutian88 账号去 Issue 粘贴并发布；应用不保存你的 GitHub 密码或密钥。</p><label class="search-label">固定 Issue 链接<input v-model="issueUrl" type="url" placeholder="https://github.com/wutian88/ai-english-pronunciation/issues/1"></label><div class="stack-actions"><button class="secondary-button" @click="saveIssue">保存 Issue 地址</button><a class="text-link" :href="issueLink" target="_blank" rel="noopener noreferrer">打开固定 Issue ↗</a></div><div class="stack-actions"><button class="primary-button" @click="copyTodayLog">复制今天的进度</button><button class="secondary-button" :disabled="!online || !issueNumberFromUrl(issueUrl)" @click="restoreFromGitHub">从 Issue 恢复进度</button></div><textarea v-if="logText" class="log-preview" readonly :value="logText" aria-label="可手动复制的今日进度"></textarea><p class="fine-print">Issue 仅备份课程与复习进度，不包含自定义词条或录音；换设备前请另存上面的 JSON。公开评论任何人都能看到；恢复时只读取仓库主人发布的有效记录。离线学习无需 GitHub。</p></section>
-          <section class="panel"><h2>设备与离线说明</h2><p>{{ voiceStatus }}</p><p class="fine-print">应用界面和课程可离线使用；首次安装或课程更新后请联网打开一次。词语、例句、常用句和对话可点击发音按钮；系统朗读能否在断网时工作，取决于 iPhone 已安装的英文语音。</p><div class="stack-actions"><button class="secondary-button" :disabled="checkingUpdates" @click="checkForUpdates">{{ checkingUpdates ? '正在检查…' : '检查更新' }}</button></div><p class="fine-print">联网检查后，若顶部出现新版本提示，点“现在更新”。不要删除应用或清除网站数据，以免丢失本机进度。</p></section>
+          <section class="panel"><h2>设备与离线说明</h2><p>{{ voiceStatus }}</p><p class="fine-print">应用界面和课程可离线使用；首次安装或课程更新后请联网打开一次。词语、例句、常用句和对话可点击发音按钮；系统朗读能否在断网时工作，取决于 iPhone 已安装的英文语音。</p><p class="fine-print">检查和更新应用都在本页上方的「应用更新」中完成。不要删除应用或清除网站数据，以免丢失本机进度。</p></section>
         </section>
       </main>
 
