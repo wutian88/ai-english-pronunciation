@@ -16,9 +16,9 @@ export default defineConfig({
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         id: base,
-        name: '日常开口英语',
-        short_name: '开口英语',
-        description: '免费练习日常英语与美式发音，另有 AI 工作英语选学',
+        name: '开口练习 · 英语与粤语',
+        short_name: '开口练习',
+        description: '免费练习日常英语、AI 工作英语与粤语，支持粤拼、朗读和离线复习',
         lang: 'zh-CN',
         start_url: base,
         scope: base,

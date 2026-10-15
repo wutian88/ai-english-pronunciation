@@ -3,6 +3,8 @@ import type { DailySession, PracticeRecord, TrackId } from '../types/wordbook';
 export const REPOSITORY = 'wutian88/ai-english-pronunciation';
 export const DEFAULT_ISSUE_URL = `https://github.com/${REPOSITORY}/issues/1`;
 const MARKER = 'ENGLISH_PROGRESS_V1';
+const TRACK_LABELS: Record<TrackId, string> = { daily: '日常', ai: 'AI', cantonese: '粤语' };
+const validTrack = (value: unknown) => value === 'daily' || value === 'ai' || value === 'cantonese';
 
 export interface GitHubLog {
   schemaVersion: 1;
@@ -26,8 +28,8 @@ export function formatLog(date: string, sessions: DailySession[], progress: Prac
     progress,
   };
   return [
-    `📘 ${date} · 英语学习记录`,
-    `完成：${payload.sessions.map((item) => `${item.track === 'ai' ? 'AI' : '日常'}《${lessonTitles[item.lessonId] ?? item.lessonId}》`).join('、') || '今日复习'}`,
+    `📘 ${date} · 语言学习记录`,
+    `完成：${payload.sessions.map((item) => `${TRACK_LABELS[item.track]}《${lessonTitles[item.lessonId] ?? item.lessonId}》`).join('、') || '今日复习'}`,
     `今日练习：${payload.progress.length} 项（不含录音）`,
     '',
     `<!-- ${MARKER}`,
@@ -47,10 +49,10 @@ export function parseLog(body: string): GitHubLog | undefined {
         !/^\d{4}-\d{2}-\d{2}$/.test(value.date) ||
         !Array.isArray(value.sessions) || !Array.isArray(value.progress)) return undefined;
     if (value.sessions.some((session) => !session ||
-      (session.track !== 'daily' && session.track !== 'ai') ||
+      !validTrack(session.track) ||
       typeof session.lessonId !== 'string' || !Number.isFinite(session.completedAt))) return undefined;
     if (value.progress.some((record) => !record ||
-      typeof record.itemId !== 'string' || (record.track !== 'daily' && record.track !== 'ai') ||
+      typeof record.itemId !== 'string' || !validTrack(record.track) ||
       !Number.isFinite(record.lastPracticed) || !Number.isFinite(record.nextReviewDate) ||
       !Number.isInteger(record.reviewStage) || record.reviewStage < 0 || record.reviewStage > 7 ||
       !Number.isInteger(record.repetitions) || record.repetitions < 0 ||

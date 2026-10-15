@@ -20,7 +20,13 @@ describe('spaced repetition', () => {
   it('keeps independent tracks and selects unfinished lessons', () => {
     const daily = rateItem('d01-w01', 'daily', 'again', undefined, now);
     const ai = rateItem('a01-w01', 'ai', 'again', undefined, now);
-    expect(dueRecords([daily, ai], 'daily', now + 11 * 60 * 1000)).toEqual([daily]);
+    const cantonese = rateItem('c01-w01', 'cantonese', 'again', undefined, now);
+    const laterCantonese = rateItem('c01-w02', 'cantonese', 'good', undefined, now);
+    const records = [daily, cantonese, ai, laterCantonese];
+    const reviewTime = now + 11 * 60 * 1000;
+    expect(dueRecords(records, 'daily', reviewTime)).toEqual([daily]);
+    expect(dueRecords(records, 'ai', reviewTime)).toEqual([ai]);
+    expect(dueRecords(records, 'cantonese', reviewTime)).toEqual([cantonese]);
     expect(selectNextLesson([{ id: 'd01' }, { id: 'd02' }], new Set(['d01']))?.id).toBe('d02');
   });
 

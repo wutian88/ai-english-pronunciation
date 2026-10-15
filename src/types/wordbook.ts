@@ -1,4 +1,4 @@
-export type TrackId = 'daily' | 'ai';
+export type TrackId = 'daily' | 'ai' | 'cantonese';
 export type Rating = 'again' | 'hard' | 'good' | 'easy';
 
 export interface WordItem {
@@ -6,9 +6,10 @@ export interface WordItem {
   word: string;
   phonetic: string;
   translation: string;
-  category: 'phonetics' | 'daily' | 'business' | 'ai' | 'custom';
+  category: 'phonetics' | 'daily' | 'business' | 'ai' | 'cantonese' | 'custom';
   linkingNotes?: string;
-  examples: { en: string; zh: string }[];
+  // `en` remains the source-text field for compatibility with existing backups.
+  examples: { en: string; zh: string; jyutping?: string }[];
 }
 
 export interface CustomWord extends WordItem {
@@ -20,6 +21,7 @@ export interface SentenceItem {
   id: string;
   en: string;
   zh: string;
+  jyutping?: string;
   notes?: string;
 }
 
@@ -32,8 +34,8 @@ export interface Lesson {
   subtitle: string;
   words: WordItem[];
   sentences: SentenceItem[];
-  dialogue: { speaker: 'A' | 'B'; en: string; zh: string }[];
-  practicePrompts: { en: string; zh: string }[];
+  dialogue: { speaker: 'A' | 'B'; en: string; zh: string; jyutping?: string }[];
+  practicePrompts: { en: string; zh: string; jyutping?: string }[];
 }
 
 export interface PracticeRecord {

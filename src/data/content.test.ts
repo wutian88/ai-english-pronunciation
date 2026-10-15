@@ -1,8 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { builtInWords, lessonsByTrack, wordById } from './content';
 import { dueRecords, rateItem, selectNextLesson } from '../lib/scheduler';
+import { cantoneseTones } from './cantonese';
 
 describe('built-in curriculum', () => {
+  it('adds Cantonese without reusing any existing curriculum IDs', () => {
+    expect(lessonsByTrack.cantonese).toHaveLength(6);
+    expect(builtInWords('cantonese')).toHaveLength(30);
+    expect(lessonsByTrack.cantonese.map((lesson) => lesson.order)).toEqual([1, 2, 3, 4, 5, 6]);
+    const allIds = Object.values(lessonsByTrack).flatMap((lessons) => lessons.flatMap((lesson) => [lesson.id, ...lesson.words.map((word) => word.id), ...lesson.sentences.map((sentence) => sentence.id)]));
+    expect(new Set(allIds).size).toBe(allIds.length);
+    expect(wordById('c01-w01')?.word).toBe('你好');
+    expect(wordById('d01-w01')?.word).toBe('hello');
+    expect(wordById('a01-w01')?.word).toBe('AI tool');
+  });
+
+  it('provides tone-numbered Jyutping for every Cantonese expression and example', () => {
+    const check = (text: string, jyutping: string | undefined) => {
+      expect(jyutping).toMatch(/^[a-z]+[1-6](?: [a-z]+[1-6])*$/);
+      expect(jyutping!.split(' ').length, text).toBe((text.match(/\p{Script=Han}/gu) ?? []).length);
+    };
+    for (const lesson of lessonsByTrack.cantonese) {
+      expect(lesson.track).toBe('cantonese');
+      expect(lesson.words).toHaveLength(5);
+      expect(lesson.sentences.length).toBeGreaterThanOrEqual(2);
+      expect(new Set(lesson.words.map((word) => word.translation)).size).toBe(5);
+      for (const word of lesson.words) {
+        check(word.word, word.phonetic);
+        for (const example of word.examples) check(example.en, example.jyutping);
+      }
+      for (const item of [...lesson.sentences, ...lesson.dialogue, ...lesson.practicePrompts]) check(item.en, item.jyutping);
+    }
+    expect(cantoneseTones.map((tone) => tone.number)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
   it('has 40 daily lessons and 28 separate AI lessons', () => {
     expect(lessonsByTrack.daily).toHaveLength(40);
     expect(lessonsByTrack.ai).toHaveLength(28);

@@ -5,11 +5,13 @@ import { aiLessons } from './ai';
 import { aiLessonsExtraA } from './ai-extra-a';
 import { aiLessonsExtraB } from './ai-extra-b';
 import { aiProjectLessons } from './ai-project';
+import { cantoneseLessons } from './cantonese';
 
 export const dailyLessons: Lesson[] = [...dailyLessonsA, ...dailyLessonsB].sort((a, b) => a.order - b.order);
 export const lessonsByTrack: Record<TrackId, Lesson[]> = {
   daily: dailyLessons,
   ai: [...aiLessons, ...aiLessonsExtraA, ...aiLessonsExtraB, ...aiProjectLessons].sort((a, b) => a.order - b.order),
+  cantonese: cantoneseLessons,
 };
 
 export function builtInWords(track: TrackId): WordItem[] {

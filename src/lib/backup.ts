@@ -36,7 +36,7 @@ export function parseBackup(text: string): LearningBackup {
       !Array.isArray(candidate.customWords)) {
     throw new Error('不是受支持的学习进度备份');
   }
-  const validTrack = (value: unknown) => value === 'daily' || value === 'ai';
+  const validTrack = (value: unknown) => value === 'daily' || value === 'ai' || value === 'cantonese';
   const validRating = (value: unknown) => value === 'again' || value === 'hard' || value === 'good' || value === 'easy';
   if (candidate.progress.some((item) =>
     !item || typeof item.itemId !== 'string' || !validTrack(item.track) ||
@@ -61,6 +61,7 @@ export function parseBackup(text: string): LearningBackup {
     typeof item.phonetic !== 'string' || typeof item.translation !== 'string' || !item.translation.trim() ||
     !Array.isArray(item.examples) || typeof item.examples[0]?.en !== 'string' ||
     typeof item.examples[0]?.zh !== 'string' ||
+    item.examples.some((example) => example?.jyutping !== undefined && typeof example.jyutping !== 'string') ||
     (item.updatedAt !== undefined && !Number.isFinite(item.updatedAt)))) {
     throw new Error('备份中的自定义词条无效');
   }

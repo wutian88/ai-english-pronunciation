@@ -21,3 +21,26 @@ input,textarea{font-size:16px!important}.rating-row button,.sentence-tabs button
 .app-update-button{width:100%;min-height:56px;padding:14px 18px;font-size:16px;border-radius:13px}
 .update-banner button{min-height:44px;padding:10px 12px;font-size:13px}
 @media(max-width:380px){.sentence-line{align-items:stretch;flex-direction:column}.listen-button{align-self:flex-start}}
+
+/* Three independent courses stay reachable on a narrow iPhone screen. */
+.track-switch{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.track-switch button{min-width:0;justify-content:center;text-align:center;padding:12px 6px}
+.track-switch button small{margin-left:0;line-height:1.45}
+.track-switch button strong{font-size:13px}
+.track-switch button span{font-size:19px}
+.jyutping{display:block;color:#276d68!important;font-size:12px!important;line-height:1.65;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.voice-notice{padding:13px 15px;border:1px solid #e6d5b0;border-radius:12px;background:#fff8e9;font-size:12px;line-height:1.65;color:#755c35;margin:0 0 18px}
+.cantonese-guide{background:#f6fbf7}
+.cantonese-guide summary{cursor:pointer;color:#236f57;font-weight:650;font-size:13px;min-height:44px;padding:12px 0}
+.cantonese-guide details>p{font-size:12px;line-height:1.8;color:#567263}
+.tone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.tone-grid article{padding:12px;border:1px solid #d4e5db;border-radius:12px;background:#fff;min-width:0}
+.tone-grid strong{font-size:12px}.tone-grid p{margin:8px 0;font-size:20px}.tone-grid small{font-size:11px;color:#617769;line-height:1.5}
+.tone-grid .word-head{align-items:center}
+.lesson-quiz{margin-top:26px;padding-top:6px;border-top:1px solid #d8e7df}
+.quiz-progress{font-size:12px;color:#617d6d}.quiz-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.quiz-choices button{min-height:48px;text-align:left;padding:12px;border:1px solid #d4e3d8;border-radius:11px;background:#f8fcf9;font-size:13px;color:#315b46}
+.quiz-choices button:disabled{opacity:1}.quiz-choices button.correct{background:#def3e5;border-color:#2c8b62}.quiz-choices button.incorrect{background:#fff0eb;border-color:#c17661}
+.lesson-quiz [role=status]{font-size:13px;line-height:1.8}.lesson-quiz ul{padding-left:20px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:540px){.tone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.track-switch button{gap:5px;align-content:center}.track-switch button strong{font-size:12px}.track-switch button small{font-size:10px}.track-switch button span{flex-basis:100%}}
