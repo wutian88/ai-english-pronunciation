@@ -4,6 +4,7 @@ import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { builtInWords, lessonsByTrack, wordById } from './data/content';
 import CantoneseGuide from './components/CantoneseGuide.vue';
 import LessonQuiz from './components/LessonQuiz.vue';
+import WordExample from './components/WordExample.vue';
 import { selectVoice } from './lib/speech';
 import { createBackup, downloadBackup, importBackup, parseBackup } from './lib/backup';
 import {
@@ -509,7 +510,7 @@ async function restoreFromGitHub() {
             <div v-else class="review-grid">
               <article v-for="item in dueWords.slice(0, 20)" :key="item.word.id" class="review-card">
                 <div class="word-head"><div><h3>{{ item.word.word }}</h3><p class="ipa">{{ item.word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${item.word.word}`" @click="speak(item.word.word)">▶</button></div>
-                <p>{{ item.word.translation }}</p><small class="example">{{ item.word.examples[0]?.en }}</small><p v-if="item.word.examples[0]?.jyutping" class="jyutping">{{ item.word.examples[0].jyutping }}</p><button v-if="item.word.examples[0]?.en" type="button" class="example-listen-button" :aria-label="`朗读例句：${item.word.examples[0].en}`" @click="speak(item.word.examples[0].en)">🔊 听例句</button>
+                <p>{{ item.word.translation }}</p><WordExample :example="item.word.examples[0]" @speak="speak" />
                 <div class="rating-row"><button @click="rate(item.word, 'again')">再练</button><button @click="rate(item.word, 'hard')">困难</button><button @click="rate(item.word, 'good')">良好</button><button @click="rate(item.word, 'easy')">熟练</button></div>
               </article>
             </div>
@@ -518,7 +519,7 @@ async function restoreFromGitHub() {
 
           <section v-if="customWords.some((item) => item.track === track)" class="panel">
             <div class="section-top"><div><p class="eyebrow">MY WORDS</p><h2>我添加的新内容</h2></div><button class="text-button" @click="tab = 'wordbook'">管理词库 →</button></div>
-            <div class="review-grid"><article v-for="word in customWords.filter((item) => item.track === track).slice(-6).reverse()" :key="word.id" class="review-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><small class="example">{{ word.examples[0]?.en }}</small><p v-if="word.examples[0]?.jyutping" class="jyutping">{{ word.examples[0].jyutping }}</p><button v-if="word.examples[0]?.en" type="button" class="example-listen-button" :aria-label="`朗读例句：${word.examples[0].en}`" @click="speak(word.examples[0].en)">🔊 听例句</button><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div></article></div>
+            <div class="review-grid"><article v-for="word in customWords.filter((item) => item.track === track).slice(-6).reverse()" :key="word.id" class="review-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div></article></div>
           </section>
 
           <section v-if="currentLesson" class="panel lesson-panel">
@@ -529,7 +530,7 @@ async function restoreFromGitHub() {
             <div class="word-grid">
               <article v-for="word in currentLesson.words" :key="word.id" class="word-card">
                 <div class="word-head"><div><h4>{{ word.word }}</h4><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div>
-                <p class="translation">{{ word.translation }}</p><p class="example">{{ word.examples[0]?.en }}</p><p v-if="word.examples[0]?.jyutping" class="jyutping">{{ word.examples[0].jyutping }}</p><button v-if="word.examples[0]?.en" type="button" class="example-listen-button" :aria-label="`朗读例句：${word.examples[0].en}`" @click="speak(word.examples[0].en)">🔊 听例句</button><p class="example-zh">{{ word.examples[0]?.zh }}</p><p v-if="word.linkingNotes" class="sound-note">发音提示：{{ word.linkingNotes }}</p>
+                <p class="translation">{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><p v-if="word.linkingNotes" class="sound-note">发音提示：{{ word.linkingNotes }}</p>
                 <div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div>
               </article>
             </div>
@@ -578,7 +579,7 @@ async function restoreFromGitHub() {
           <section class="panel"><h2>批量导入词库</h2><p>把 JSON 数组导入当前「{{ trackName }}」词库；重复词条会跳过。</p><label class="secondary-button import-button">选择词库 JSON<input type="file" accept="application/json,.json" @change="importWordList"></label><details class="fine-print"><summary>查看格式示例</summary><pre v-if="!isCantonese">[{"word":"Could you repeat that?","phonetic":"/kʊd ju rɪˈpiːt ðæt/","translation":"能再说一遍吗？","examples":[{"en":"Could you repeat that, please?","zh":"请再说一遍好吗？"}]}]</pre><pre v-else>[{"word":"唔該","phonetic":"m4 goi1","translation":"请／谢谢","examples":[{"en":"唔該，請再講一次。","zh":"请再说一次。","jyutping":"m4 goi1, cing2 zoi3 gong2 jat1 ci3"}]}]</pre></details></section>
           <label class="search-label">搜索本词库<input v-model="wordSearch" type="search" :placeholder="isCantonese ? '输入粤语、中文意思或粤拼' : '输入英文或中文'"></label>
           <p v-if="!wordSearch" class="fine-print">默认显示前 24 项；搜索可查全部内容。</p>
-          <div class="word-grid"><article v-for="word in filteredWords" :key="word.id" class="word-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><p class="example">{{ word.examples[0]?.en }}</p><p v-if="word.examples[0]?.jyutping" class="jyutping">{{ word.examples[0].jyutping }}</p><button v-if="word.examples[0]?.en" type="button" class="example-listen-button" :aria-label="`朗读例句：${word.examples[0].en}`" @click="speak(word.examples[0].en)">🔊 听例句</button><p class="example-zh">{{ word.examples[0]?.zh }}</p><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div><div v-if="word.category === 'custom'" class="custom-actions"><button @click="editCustomWord(word as CustomWord)">编辑</button><button @click="removeCustomWord(word as CustomWord)">删除</button></div></article></div>
+          <div class="word-grid"><article v-for="word in filteredWords" :key="word.id" class="word-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div><div v-if="word.category === 'custom'" class="custom-actions"><button @click="editCustomWord(word as CustomWord)">编辑</button><button @click="removeCustomWord(word as CustomWord)">删除</button></div></article></div>
           <p v-if="!filteredWords.length" class="empty-state">没有找到相关词条。</p>
         </section>
 
