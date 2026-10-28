@@ -1,155 +1,37 @@
-name: Update AI Daily and Deploy GitHub Pages
+name: Deploy Speaking English to GitHub Pages
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: '0 1 * * *'
+
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
 concurrency:
   group: github-pages
-  cancel-in-progress: false
+  cancel-in-progress: true
+
 jobs:
-  failure-drill:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        fault: [before_upload, stale_artifact, remote_head]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Record online baseline
-        run: python scripts/deploy_guard.py baseline
-      - name: Prepare isolated artifact
-        env:
-          FAULT: ${{ matrix.fault }}
-        run: |
-          mkdir -p dist/ai-daily
-          cp public/ai-daily/content.json dist/ai-daily/content.json
-          if [ "$FAULT" = stale_artifact ]; then echo ' ' >> dist/ai-daily/content.json; fi
-      - name: Exercise production gate with fault
-        id: gate
-        continue-on-error: true
-        env:
-          AI_DAILY_FAULT_TEST: '1'
-          FAULT: ${{ matrix.fault }}
-        run: |
-          if [ "$FAULT" = stale_artifact ]; then python scripts/deploy_guard.py gate; else python scripts/deploy_guard.py gate --fault "$FAULT"; fi
-      - name: Upload must not be reached
-        id: upload
-        if: steps.gate.outcome == 'success'
-        run: exit 1
-      - name: Verify no upload and unchanged live content
-        if: always()
-        env:
-          GATE: ${{ steps.gate.outcome }}
-          UPLOAD: ${{ steps.upload.outcome }}
-        run: |
-          test "$GATE" = failure
-          test "$UPLOAD" = skipped
-          python scripts/deploy_guard.py verify
-      - name: Drill summary
-        if: always()
-        env:
-          FAULT: ${{ matrix.fault }}
-          GATE: ${{ steps.gate.outcome }}
-          UPLOAD: ${{ steps.upload.outcome }}
-        run: |
-          printf '## Deployment drill\nFault: %s\nGate outcome (expected failure): %s\nUpload: %s\nNo Pages deployment invoked by drill.\n' "$FAULT" "$GATE" "$UPLOAD" >> "$GITHUB_STEP_SUMMARY"
   deploy:
-    needs: failure-drill
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Test updater and isolated Git races
-        run: python -m unittest discover -s scripts/tests -p 'test_*.py'
-      - name: Collect sources
-        id: collect
-        if: github.event_name != 'push'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python scripts/cloud_daily.py
-      - name: Commit candidate locally
-        if: steps.collect.outcome == 'success'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/ai-daily/content.json ai-daily/archive ai-daily/state.json
-          if ! git diff --cached --quiet; then git commit -m 'Update AI source digest [skip ci]'; fi
-      - name: Rebase candidate onto current main
-        id: rebase
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          if ! git pull --rebase origin main; then
-            git rebase --abort || true
-            echo 'rebase_conflict: aborted; upload and deployment blocked' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-      - name: Test Python code after rebase
-        run: python -m unittest discover -s scripts/tests -p 'test_*.py' 
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Test rebased application
-        id: tests
-        run: npm run test
-      - name: Build rebased application
-        id: build
-        run: npm run build
-      - name: Push without force
-        id: push
-        if: steps.collect.outcome == 'success'
-        run: |
-          if ! git push origin HEAD:main; then
-            echo 'push_rejected: no force push, upload and deployment blocked' >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-      - name: Gate upload on remote HEAD and built content
-        id: gate
-        run: python scripts/deploy_guard.py gate
+      - run: npm run test
+      - run: npm run build
       - uses: actions/configure-pages@v5
-        if: success() && steps.gate.outcome == 'success' 
       - uses: actions/upload-pages-artifact@v3
-        if: success() && steps.gate.outcome == 'success' 
-        id: upload
         with:
           path: dist
       - id: deployment
-        if: success() && steps.gate.outcome == 'success'
         uses: actions/deploy-pages@v4
-      - name: Always write outcome summary
-        if: always()
-        env:
-          STATUS: ${{ job.status }}
-          COLLECT: ${{ steps.collect.outcome }}
-          REBASE: ${{ steps.rebase.outcome }}
-          PUSH: ${{ steps.push.outcome }}
-          BUILD: ${{ steps.build.outcome }}
-          GATE: ${{ steps.gate.outcome }}
-          UPLOAD: ${{ steps.upload.outcome }}
-          DEPLOY: ${{ steps.deployment.outcome }}
-        run: |
-          printf '## Pipeline outcome\nStatus: %s\nCollection: %s\nRebase: %s\nBuild: %s\nPush: %s\nGate: %s\nUpload: %s\nDeploy: %s\n' "$STATUS" "$COLLECT" "$REBASE" "$BUILD" "$PUSH" "$GATE" "$UPLOAD" "$DEPLOY" >> "$GITHUB_STEP_SUMMARY"
-          printf 'Local HEAD: %s\nRemote HEAD: %s\n' "$(git rev-parse HEAD)" "$(git ls-remote origin refs/heads/main | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$DEPLOY" != success ]; then echo 'No successful deployment confirmed. Predeployment failures stop upload/deploy. Platform failures need live-site inspection. Review conflicts and rerun; never force push.' >> "$GITHUB_STEP_SUMMARY"; fi
