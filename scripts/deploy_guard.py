@@ -1,12 +1,18 @@
 """Fail closed before Pages upload; same guard used by production and drills."""
-import argparse,hashlib,json,os,subprocess,sys,urllib.request
+import argparse,hashlib,json,os,subprocess,sys,urllib.request,uuid,time
 from pathlib import Path
 URL='https://wutian88.github.io/ai-english-pronunciation/ai-daily/content.json'
 def git(*args):return subprocess.check_output(['git',*args],text=True).strip()
 def digest(data):return hashlib.sha256(data).hexdigest()
 def live():
-    req=urllib.request.Request(URL,headers={'Cache-Control':'no-cache','User-Agent':'AI-Deploy-Verification'})
-    with urllib.request.urlopen(req,timeout=30) as r:data=r.read()
+    for attempt in range(3):
+        try:
+            req=urllib.request.Request(URL+'?verify='+uuid.uuid4().hex,headers={'Cache-Control':'no-cache','User-Agent':'AI-Deploy-Verification'})
+            with urllib.request.urlopen(req,timeout=30) as r:data=r.read()
+            break
+        except Exception:
+            if attempt==2:raise
+            time.sleep(2)
     json.loads(data)
     return digest(data)
 def guard(fault=None):
@@ -24,7 +30,10 @@ def main():
     if x.mode=='gate':guard(x.fault)
     elif x.mode=='baseline':Path('baseline.sha256').write_text(live(),encoding='utf-8')
     else:
-        before=Path('baseline.sha256').read_text(encoding='utf-8');after=live()
-        if before!=after:raise RuntimeError('Online content changed during drill; cannot claim unchanged')
-        print(json.dumps({'before':before,'after':after,'online_unchanged':True}))
+        before=Path('baseline.sha256').read_text(encoding='utf-8');samples=[]
+        for _ in range(3):
+            after=live();samples.append(after)
+            if before!=after:raise RuntimeError('Online content changed during drill; cannot claim unchanged')
+            time.sleep(1)
+        print(json.dumps({'before':before,'after_samples':samples,'online_unchanged':True}))
 if __name__=='__main__':main()
