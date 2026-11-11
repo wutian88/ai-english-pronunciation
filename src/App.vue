@@ -49,6 +49,13 @@ const logText = ref('');
 const backupUrl = ref('');
 const backupName = ref('');
 const wordSearch = ref('');
+const dictionaryLinks = computed(() => {
+  const query = encodeURIComponent(wordSearch.value.trim());
+  return {
+    youdao: `https://www.youdao.com/result?word=${query}&lang=en`,
+    bing: `https://www.bing.com/dict/search?q=${query}`,
+  };
+});
 const editingWordId = ref('');
 const wordForm = ref({ word: '', phonetic: '', translation: '', exampleEn: '', exampleZh: '', exampleJyutping: '', linkingNotes: '' });
 
@@ -592,7 +599,15 @@ async function restoreFromGitHub() {
           <p v-if="wordSearch.trim()" role="status">找到 {{ filteredWords.length }} 个相关词条</p>
           <p v-if="!wordSearch.trim()" class="fine-print">默认显示前 24 项；搜索可查全部内容。</p>
           <div class="word-grid"><article v-for="word in filteredWords" :key="word.id" class="word-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div><div v-if="word.category === 'custom'" class="custom-actions"><button @click="editCustomWord(word as CustomWord)">编辑</button><button @click="removeCustomWord(word as CustomWord)">删除</button></div></article></div>
-          <p v-if="!filteredWords.length" class="empty-state">当前「{{ trackName }}」没有收录这个词。可切换词库搜索，或在下方添加自己的词条；本应用不会自动联网生成释义。</p>
+          <section v-if="wordSearch.trim() && !filteredWords.length" class="panel" aria-labelledby="dictionary-heading">
+            <h2 id="dictionary-heading">本地未找到「{{ wordSearch.trim() }}」</h2>
+            <p>当前「{{ trackName }}」没有收录相关词条。可以一键前往词典网站查看中文意思、发音和例句。</p>
+            <div class="stack-actions">
+              <a class="secondary-button" :href="dictionaryLinks.youdao" target="_blank" rel="noopener noreferrer">去有道查词 ↗</a>
+              <a class="secondary-button" :href="dictionaryLinks.bing" target="_blank" rel="noopener noreferrer">去必应词典 ↗</a>
+            </div>
+            <p class="fine-print">{{ online ? '将在新页面打开词典，并自动带上搜索词。' : '当前离线，联网后即可打开外部词典。' }}结果由词典网站提供，不会自动保存到本地词库；也可切换词库或在下方手动添加。</p>
+          </section>
           <section class="panel editor-panel"><h2>{{ editingWordId ? '修改自定义词条' : '添加你想学的内容' }}</h2><p class="fine-print">写入后即可在本词库搜索、朗读并安排复习。</p>
             <form class="word-form" @submit.prevent="saveWord"><label>{{ isCantonese ? '粤语词或句块' : '英文词或句块' }}<input v-model="wordForm.word" required :placeholder="isCantonese ? '唔該' : 'Could you say that again?'"></label><label>{{ isCantonese ? '粤拼（可选）' : '音标（可选）' }}<input v-model="wordForm.phonetic" :placeholder="isCantonese ? 'm4 goi1' : '/kʊd ju seɪ ðæt əˈɡen/'"></label><label>中文意思<input v-model="wordForm.translation" required placeholder="你能再说一遍吗？"></label><label>{{ isCantonese ? '粤语例句' : '英文例句' }}<input v-model="wordForm.exampleEn" required :placeholder="isCantonese ? '唔該，請再講一次。' : 'Could you say that again, please?'"></label><label>例句翻译<input v-model="wordForm.exampleZh" placeholder="请问你能再说一遍吗？"></label><label v-if="isCantonese">例句粤拼（可选）<input v-model="wordForm.exampleJyutping" placeholder="m4 goi1, cing2 zoi3 gong2 jat1 ci3"></label><label>发音提示<input v-model="wordForm.linkingNotes" :placeholder="isCantonese ? 'm4 是低降调' : 'could you 可弱读'"></label><div class="bottom-actions"><button v-if="editingWordId" type="button" class="secondary-button" @click="clearWordForm">取消编辑</button><button type="submit" class="primary-button">{{ editingWordId ? '保存修改' : '加入我的词库' }}</button></div></form>
           </section>
