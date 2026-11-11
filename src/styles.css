@@ -44,3 +44,7 @@ input,textarea{font-size:16px!important}.rating-row button,.sentence-tabs button
 .lesson-quiz [role=status]{font-size:13px;line-height:1.8}.lesson-quiz ul{padding-left:20px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:540px){.tone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.track-switch button{gap:5px;align-content:center}.track-switch button strong{font-size:12px}.track-switch button small{font-size:10px}.track-switch button span{flex-basis:100%}}
+
+.quick-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quick-search-row input{flex:1 1 150px;min-width:0;width:100%;min-height:48px;padding:12px;border:1px solid #c7d9cf;border-radius:10px;font:inherit}
+.quick-search-row button{min-height:48px}

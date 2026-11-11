@@ -5,6 +5,7 @@ import { builtInWords, lessonsByTrack, wordById } from './data/content';
 import CantoneseGuide from './components/CantoneseGuide.vue';
 import LessonQuiz from './components/LessonQuiz.vue';
 import WordExample from './components/WordExample.vue';
+import { searchWords } from './lib/search';
 import { selectVoice } from './lib/speech';
 import { createBackup, downloadBackup, importBackup, parseBackup } from './lib/backup';
 import {
@@ -78,10 +79,11 @@ const studyAdvice = computed(() => {
 });
 const currentSentence = computed(() => currentLesson.value?.sentences[sentenceIndex.value]);
 const allTrackWords = computed(() => [...builtInWords(track.value), ...customWords.value.filter((item) => item.track === track.value)]);
-const filteredWords = computed(() => {
-  const query = wordSearch.value.trim().toLowerCase();
-  return query ? allTrackWords.value.filter((item) => `${item.word} ${item.translation} ${item.phonetic}`.toLowerCase().includes(query)) : allTrackWords.value.slice(0, 24);
-});
+const filteredWords = computed(() => searchWords(allTrackWords.value, wordSearch.value));
+function submitWordSearch() {
+  tab.value = 'wordbook';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 const issueLink = computed(() => issueNumberFromUrl(issueUrl.value)
   ? issueUrl.value
   : `https://github.com/${REPOSITORY}/issues/new?title=${encodeURIComponent('我的语言学习进度')}`);
@@ -499,6 +501,13 @@ async function restoreFromGitHub() {
       <main id="main-content">
         <section v-if="tab === 'today'" class="page">
           <div class="page-heading"><div><p class="eyebrow">{{ todayKey }} · {{ trackName }}</p><h1>{{ isCantonese ? '今日，試下講廣東話' : '今天，开口说英语' }}</h1><p>{{ isCantonese ? '先听粤语，再看粤拼，最后自己说一遍。' : '先复习到期内容，再学一课新表达。' }}三套词库分别记录进度。</p></div></div>
+          <section class="panel quick-search">
+            <form role="search" @submit.prevent="submitWordSearch">
+              <label class="search-label" for="word-search">想了解哪个词？ · {{ trackName }}</label>
+              <div class="quick-search-row"><input id="word-search" v-model="wordSearch" type="search" :placeholder="isCantonese ? '输入粤语、中文或粤拼' : '输入英文单词、短语或中文'" autocomplete="off" enterkeyhint="search"><button class="primary-button" type="submit">搜索</button><button v-if="wordSearch" class="text-button" type="button" @click="wordSearch = ''">清空</button></div>
+            </form>
+            <p class="fine-print">搜索当前词库全部课程和自定义内容，支持词义、音标和例句；完全匹配优先。</p>
+          </section>
           <div class="metric-row"><div><strong>{{ completedCount }} / {{ lessons.length }}</strong><span>已完成课程</span></div><div><strong>{{ dueWords.length }}</strong><span>到期复习</span></div><div><strong>{{ todayCompleted.length }}</strong><span>今日完成</span></div></div>
           <p class="study-advice">{{ studyAdvice }}</p>
           <CantoneseGuide v-if="isCantonese" @speak="speak" />
@@ -573,14 +582,22 @@ async function restoreFromGitHub() {
 
         <section v-else-if="tab === 'wordbook'" class="page">
           <div class="page-heading"><p class="eyebrow">{{ trackName }} · WORD BANK</p><h1>词库与我的内容</h1><p>内置词条 {{ builtInWords(track).length }} 个；你添加的词条 {{ customWords.filter((item) => item.track === track).length }} 个。</p></div>
+          <section class="panel quick-search">
+            <form role="search" @submit.prevent="submitWordSearch">
+              <label class="search-label" for="word-search">想了解哪个词？ · {{ trackName }}</label>
+              <div class="quick-search-row"><input id="word-search" v-model="wordSearch" type="search" :placeholder="isCantonese ? '输入粤语、中文或粤拼' : '输入英文单词、短语或中文'" autocomplete="off" enterkeyhint="search"><button class="primary-button" type="submit">搜索</button><button v-if="wordSearch" class="text-button" type="button" @click="wordSearch = ''">清空</button></div>
+            </form>
+            <p class="fine-print">搜索当前词库全部课程和自定义内容，支持词义、音标和例句；完全匹配优先。</p>
+          </section>
+          <p v-if="wordSearch.trim()" role="status">找到 {{ filteredWords.length }} 个相关词条</p>
+          <p v-if="!wordSearch.trim()" class="fine-print">默认显示前 24 项；搜索可查全部内容。</p>
+          <div class="word-grid"><article v-for="word in filteredWords" :key="word.id" class="word-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div><div v-if="word.category === 'custom'" class="custom-actions"><button @click="editCustomWord(word as CustomWord)">编辑</button><button @click="removeCustomWord(word as CustomWord)">删除</button></div></article></div>
+          <p v-if="!filteredWords.length" class="empty-state">当前「{{ trackName }}」没有收录这个词。可切换词库搜索，或在下方添加自己的词条；本应用不会自动联网生成释义。</p>
           <section class="panel editor-panel"><h2>{{ editingWordId ? '修改自定义词条' : '添加你想学的内容' }}</h2><p class="fine-print">写入后即可在本词库搜索、朗读并安排复习。</p>
             <form class="word-form" @submit.prevent="saveWord"><label>{{ isCantonese ? '粤语词或句块' : '英文词或句块' }}<input v-model="wordForm.word" required :placeholder="isCantonese ? '唔該' : 'Could you say that again?'"></label><label>{{ isCantonese ? '粤拼（可选）' : '音标（可选）' }}<input v-model="wordForm.phonetic" :placeholder="isCantonese ? 'm4 goi1' : '/kʊd ju seɪ ðæt əˈɡen/'"></label><label>中文意思<input v-model="wordForm.translation" required placeholder="你能再说一遍吗？"></label><label>{{ isCantonese ? '粤语例句' : '英文例句' }}<input v-model="wordForm.exampleEn" required :placeholder="isCantonese ? '唔該，請再講一次。' : 'Could you say that again, please?'"></label><label>例句翻译<input v-model="wordForm.exampleZh" placeholder="请问你能再说一遍吗？"></label><label v-if="isCantonese">例句粤拼（可选）<input v-model="wordForm.exampleJyutping" placeholder="m4 goi1, cing2 zoi3 gong2 jat1 ci3"></label><label>发音提示<input v-model="wordForm.linkingNotes" :placeholder="isCantonese ? 'm4 是低降调' : 'could you 可弱读'"></label><div class="bottom-actions"><button v-if="editingWordId" type="button" class="secondary-button" @click="clearWordForm">取消编辑</button><button type="submit" class="primary-button">{{ editingWordId ? '保存修改' : '加入我的词库' }}</button></div></form>
           </section>
           <section class="panel"><h2>批量导入词库</h2><p>把 JSON 数组导入当前「{{ trackName }}」词库；重复词条会跳过。</p><label class="secondary-button import-button">选择词库 JSON<input type="file" accept="application/json,.json" @change="importWordList"></label><details class="fine-print"><summary>查看格式示例</summary><pre v-if="!isCantonese">[{"word":"Could you repeat that?","phonetic":"/kʊd ju rɪˈpiːt ðæt/","translation":"能再说一遍吗？","examples":[{"en":"Could you repeat that, please?","zh":"请再说一遍好吗？"}]}]</pre><pre v-else>[{"word":"唔該","phonetic":"m4 goi1","translation":"请／谢谢","examples":[{"en":"唔該，請再講一次。","zh":"请再说一次。","jyutping":"m4 goi1, cing2 zoi3 gong2 jat1 ci3"}]}]</pre></details></section>
-          <label class="search-label">搜索本词库<input v-model="wordSearch" type="search" :placeholder="isCantonese ? '输入粤语、中文意思或粤拼' : '输入英文或中文'"></label>
-          <p v-if="!wordSearch" class="fine-print">默认显示前 24 项；搜索可查全部内容。</p>
-          <div class="word-grid"><article v-for="word in filteredWords" :key="word.id" class="word-card"><div class="word-head"><div><h3>{{ word.word }}</h3><p class="ipa">{{ word.phonetic }}</p></div><button class="icon-button" :aria-label="`朗读 ${word.word}`" @click="speak(word.word)">▶</button></div><p>{{ word.translation }}</p><WordExample :example="word.examples[0]" @speak="speak" /><div class="rating-row"><button @click="rate(word, 'again')">再练</button><button @click="rate(word, 'hard')">困难</button><button @click="rate(word, 'good')">良好</button><button @click="rate(word, 'easy')">熟练</button></div><div v-if="word.category === 'custom'" class="custom-actions"><button @click="editCustomWord(word as CustomWord)">编辑</button><button @click="removeCustomWord(word as CustomWord)">删除</button></div></article></div>
-          <p v-if="!filteredWords.length" class="empty-state">没有找到相关词条。</p>
+
         </section>
 
         <section v-else class="page">
